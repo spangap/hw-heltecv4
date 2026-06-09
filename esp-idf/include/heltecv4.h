@@ -1,0 +1,40 @@
+/**
+ * heltecv4.h — Heltec WiFi LoRa 32 (V4) board support for reticulous.
+ *
+ * The V4 is an ESP32-S3R2 (2 MB *quad* PSRAM, 16 MB flash) carrying one
+ * Semtech SX1262 on its own SPI bus, plus a Vext-gated peripheral power rail.
+ * This first cut wires only those two things — no OLED, no GNSS, no SD (the
+ * "no LCD for now" build). See heltecv4.cpp for the implementation and the
+ * board reference: https://heltec.org/project/wifi-lora-32-v4/
+ *
+ * What this module provides:
+ *   - Compile-time constants for the board's own pins (the Vext power-enable).
+ *   - The always-on board bring-up entry point heltecv4Start().
+ *
+ * The SX1262's pins (NSS/SCK/MOSI/MISO/RST/BUSY/DIO1, TCXO, DIO2 RF switch)
+ * are NOT wired here: they belong to iface-lora's CONFIG_LORA* knobs, set as
+ * board VALUES in this straddle's straddle.yaml `kconfig:` block. So this
+ * header carries only the board's own power rail.
+ */
+#pragma once
+
+#include "sdkconfig.h"
+
+#define BOARD_NAME              "Heltec WiFi LoRa 32 (V4)"
+
+/* Vext peripheral power-enable. The V4 gates its external 3.3 V rail (Vext pin,
+ * OLED, GNSS header) behind a P-MOSFET controlled by GPIO 36: drive the gate
+ * LOW to turn the rail ON (active-low). The SX1262 itself is powered directly,
+ * not off Vext, so LoRa works regardless — but we still bring the rail up at
+ * boot so any Vext-powered peripheral added later is live. -1 = no such pin. */
+#define BOARD_VEXT_CTRL_PIN     36
+#define BOARD_VEXT_ON_LEVEL     0   /* 0 = pull low to enable (active-low) */
+
+/**
+ * Board bring-up. heltecv4Start() is the always-on hardware bring-up: it drives
+ * the Vext peripheral power rail on and parks the LoRa radio's CS line HIGH so
+ * the SX1262 doesn't drive MISO before loraInit() claims it. It runs in the
+ * start: band, before spangapInit(). There is no on-device UI in this build, so
+ * there is no init: companion.
+ */
+void heltecv4Start(void);
