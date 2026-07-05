@@ -2,7 +2,7 @@
 #
 # A plain (non-buildable) board component: it doesn't decide what the device
 # DOES, it only makes the board usable by an app. The reticulous/reticulous
-# buildable adds it with `--with reticulous/hw-heltecv4` and inherits the
+# buildable adds it with `--with spangap/hw-heltecv4` and inherits the
 # board's pin map, bring-up hook and hardware kconfig.
 #
 # Owns the V4 board HAL (esp-idf/src/heltecv4.cpp: the Vext peripheral power rail
@@ -14,7 +14,7 @@
 # those peripherals exist on the board but are deliberately left unwired for now.
 # This board adds nothing extra (no spangap-lcd): it builds headless.
 schema_version: 1
-name: reticulous/hw-heltecv4
+name: spangap/hw-heltecv4
 prefix: heltecv4
 firmware: esp-idf
 version: 0.0.0

@@ -9,7 +9,7 @@ tuning as Kconfig. Board reference: <https://heltec.org/project/wifi-lora-32-v4/
 
 It is a **non-buildable** component — it decides nothing about what the device
 *does*. A buildable assembler (`reticulous/reticulous`) adds it and inherits the
-board: `spangap build reticulous/reticulous --with reticulous/hw-heltecv4`. The
+board: `spangap build reticulous/reticulous --with spangap/hw-heltecv4`. The
 mesh stack, the IP/web platform, `app_main`, the partition layout, the update
 story and the browser SPA all come from the buildable and its other straddles —
 not from here.
