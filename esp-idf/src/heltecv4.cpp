@@ -54,6 +54,6 @@ static void heltecv4PowerInit(void)
  * Public API — the always-on board bring-up (see heltecv4.h).
  * ========================================================================= */
 
-void heltecv4Start(void) {
+void Heltecv4Board::onStart() {
     heltecv4PowerInit();   /* Vext rail + LoRa CS park */
 }

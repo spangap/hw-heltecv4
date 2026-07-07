@@ -19,6 +19,7 @@
 #pragma once
 
 #include "sdkconfig.h"
+#include "service.h"
 
 #define BOARD_NAME              "Heltec WiFi LoRa 32 (V4)"
 
@@ -31,10 +32,13 @@
 #define BOARD_VEXT_ON_LEVEL     0   /* 0 = pull low to enable (active-low) */
 
 /**
- * Board bring-up. heltecv4Start() is the always-on hardware bring-up: it drives
- * the Vext peripheral power rail on and parks the LoRa radio's CS line HIGH so
- * the SX1262 doesn't drive MISO before loraInit() claims it. It runs in the
- * start: band, before spangapInit(). There is no on-device UI in this build, so
- * there is no init: companion.
+ * Board bring-up, as a registered Service. Heltecv4Board::onStart is the
+ * always-on hardware bring-up: it drives the Vext peripheral power rail on and
+ * parks the LoRa radio's CS line HIGH so the SX1262 doesn't drive MISO before
+ * the LoRa interface claims it. It runs in the start band, before spangapInit().
+ * There is no on-device UI in this build, so there is no onInit companion.
  */
-void heltecv4Start(void);
+class Heltecv4Board : public Service {
+public:
+    void onStart() override;
+};
