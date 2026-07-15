@@ -90,6 +90,7 @@ straddle / IDF:
 | Key | Value | Why |
 |---|---|---|
 | `CONFIG_ESPTOOLPY_FLASHSIZE_16MB` | `y` | 16 MB flash |
+| `CONFIG_SPANGAP_MAX_FIRMWARE_KB` | `6144` | state floor at 6 MB: `app`+`fixed` (~2.8 MB) plus growth headroom sit below it, and the runtime `/state` partition fills the remaining ~10 MB of the chip. Without it the floor defaults to the whole container and `app` eats all 16 MB — leaving **no `/state`** |
 | `CONFIG_SPIRAM_MODE_QUAD` | `y` | the S3R2 carries 2 MB PSRAM in **quad** mode, not octal |
 
 The platform's usual "octal PSRAM" assumption (the T-Deck's S3R8) does **not**

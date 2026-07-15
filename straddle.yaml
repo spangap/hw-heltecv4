@@ -35,6 +35,14 @@ kconfig:
   # SPIRAM_MODE_QUAD, not _OCT. The platform's "octal PSRAM" assumption does not
   # hold on this board; watch DRAM/PSRAM headroom.
   - CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+  # State floor = the offset where the runtime read-write /state partition
+  # begins; /state then fills the rest of the real 16 MB chip. WITHOUT this the
+  # floor defaults to the whole flash container, so `app` expands to fill all
+  # 16 MB and NO /state partition exists (the device has nowhere to store user
+  # data). 6 MB = the headless app+fixed (~2.8 MB) plus ~3 MB of growth headroom;
+  # /state gets the remaining ~10 MB. Changing this relocates /state → existing
+  # devices factory-reset on the next boot, so warn users before bumping it.
+  - CONFIG_SPANGAP_MAX_FIRMWARE_KB=6144
   - CONFIG_SPIRAM_MODE_QUAD=y
   # One SX1262 LoRa modem on its own SPI bus (separate from the flash bus).
   # Pins per the Heltec WiFi LoRa 32 V4 pin map. The SX1262 drives DIO2 as its
