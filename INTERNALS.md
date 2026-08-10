@@ -80,6 +80,24 @@ only when iface-lora is staged; the Vext block is guarded by
   park lets a live, unselected radio drive the bus line.
 - **Vext is active-low.** Drive GPIO 36 **LOW** to enable the rail
   (`BOARD_VEXT_ON_LEVEL = 0`). Driving it high turns the external rail off.
+- **Vext must be exempt from light-sleep pin isolation.**
+  `CONFIG_PM_SLP_DISABLE_GPIO` switches every pin to its sleep config on
+  light-sleep entry; an isolated GPIO 36 floats, the P-MOSFET gate rises and
+  the rail cuts out mid-sleep — the OLED loses VCC on the first sleep entry
+  (typically the moment `usb down` releases the console's no-sleep lock) and
+  comes back uninitialised, i.e. permanently dark. `heltecv4PowerInit` calls
+  `gpio_sleep_sel_dis(36)` so the pin keeps driving through sleep; any future
+  board-owned output that must hold its level (rail gates, resets) needs the
+  same exemption. tinylcd does the equivalent for its OLED reset pin.
+- **The RF path runs through the FEM — an undriven FEM is a broken radio.**
+  TX and RX both traverse the front-end module; with its rail or enable pins
+  unconfigured the link works at best heavily attenuated. iface-lora owns the
+  FEM (detection, switching, gain conversion — see its `lora_fem.h`); this
+  straddle only publishes the pins. The detect sense reads the enable net's
+  pull-up, which is powered from the FEM side — the rail must be up first,
+  which femInit handles. All FEM pins are exempted from light-sleep isolation
+  for the same reason Vext is: a radio listening across light sleep needs the
+  FEM held in its RX state, not floating.
 - **Quad PSRAM, not octal — watch internal-DRAM headroom.** The S3R2 carries
   only 2 MB of PSRAM in quad mode (`CONFIG_SPIRAM_MODE_QUAD`), unlike the
   T-Deck's 8 MB octal S3R8. The platform's "octal PSRAM" assumption does not

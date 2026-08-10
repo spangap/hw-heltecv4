@@ -2,9 +2,10 @@
  * heltecv4.h — Heltec WiFi LoRa 32 (V4) board support for reticulous.
  *
  * The V4 is an ESP32-S3R2 (2 MB *quad* PSRAM, 16 MB flash) carrying one
- * Semtech SX1262 on its own SPI bus, plus a Vext-gated peripheral power rail.
- * This first cut wires only those two things — no OLED, no GNSS, no SD (the
- * "no LCD for now" build). See heltecv4.cpp for the implementation and the
+ * Semtech SX1262 on its own SPI bus, a Vext-gated peripheral power rail and a
+ * 0.96" SSD1306 OLED. The board wires LoRa, Vext and the OLED (the OLED via
+ * spangap/tinylcd — pins published in straddle.yaml, panel powered off Vext);
+ * GNSS and SD stay unwired. See heltecv4.cpp for the implementation and the
  * board reference: https://heltec.org/project/wifi-lora-32-v4/
  *
  * What this module provides:
@@ -35,8 +36,9 @@
  * Board bring-up, as a registered Service. Heltecv4Board::onStart is the
  * always-on hardware bring-up: it drives the Vext peripheral power rail on and
  * parks the LoRa radio's CS line HIGH so the SX1262 doesn't drive MISO before
- * the LoRa interface claims it. It runs in the start band, before spangapInit().
- * There is no on-device UI in this build, so there is no onInit companion.
+ * the LoRa interface claims it. It runs in the start band, before spangapInit()
+ * — and before tinylcd's task touches the Vext-powered OLED. There is no
+ * onInit companion: the OLED UI is tinylcd's own service.
  */
 class Heltecv4Board : public Service {
 public:

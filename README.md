@@ -14,11 +14,12 @@ mesh stack, the IP/web platform, `app_main`, the partition layout, the update
 story and the browser SPA all come from the buildable and its other straddles —
 not from here.
 
-This board has no on-device UI, GNSS or SD card wired: it builds **headless**
-automatically (there is no LCD straddle in its dependency set, so nothing pulls
-in `spangap-lcd`). The V4's OLED, GNSS header and other peripherals exist on the
-hardware but are deliberately left unwired here; only LoRa and the Vext rail are
-brought up.
+The board's 0.96" SSD1306 OLED (128×64, on the Vext rail) is wired as a
+**paged status display** via [tinylcd](../tinylcd), which this straddle stages
+(`additional_installs`) and feeds pins through a gated `kconfig:` group; the
+BOOT/PRG button (GPIO 0) advances the page. The colour-TFT UI (`spangap-lcd`)
+stays out — the OLED is tinylcd's mono paged UI, not LVGL. GNSS and the other
+header peripherals remain unwired.
 
 ## Origins
 
@@ -38,11 +39,12 @@ board comes up automatically.
 | `heltecv4Start` | start | always | Vext peripheral power rail ON, LoRa CS park HIGH |
 
 `heltecv4Start` runs in the `start:` band, **before** `spangapInit()`. It is
-bare-hardware bring-up: it drives the Vext rail on so any rail-powered
-peripheral is live at boot, and parks the SX1262's CS line HIGH so the radio
-does not drive MISO before `loraInit()` (in [iface-lora](../iface-lora)) claims
-the pin. There is no `init:`-band companion — there is no on-device UI in this
-build.
+bare-hardware bring-up: it drives the Vext rail on so the OLED (and any other
+rail-powered peripheral) is live before tinylcd's task initialises the panel,
+and parks the SX1262's CS line HIGH so the radio does not drive MISO before
+`loraInit()` (in [iface-lora](../iface-lora)) claims the pin. There is no
+`init:`-band companion — the OLED UI is [tinylcd](../tinylcd)'s own service,
+not a board hook.
 
 Unlike the T-Deck, the SX1262 sits on its **own** SPI bus (separate from the
 flash bus) and is powered directly rather than off Vext, so there is no
@@ -74,11 +76,45 @@ The SX1262 drives **DIO2** as its own RF antenna switch and **DIO3** supplies
 the 1.8 V TCXO (`CONFIG_LORA0_TCXO_MV=1800`). One radio
 (`CONFIG_LORA_COUNT=1`), `CONFIG_LORA0_RADIO_SX1262=y`.
 
+### LoRa front-end module (FEM) — 27 dBm
+
+An external FEM (PA + LNA + antenna switch) sits between the SX1262 and the
+antenna and takes TX to **27 dBm at the antenna** (the chip alone stops at
+22). Two parts exist across board revisions — **GC1109** (≤ V4.2) and
+**KCT8103L** (V4.3) — and iface-lora auto-detects which one this board
+carries at boot (the enable net, GPIO 2, is pulled up only in the KCT8103L
+design), then drives its pins on every RX/TX transition:
+
+| Signal | GPIO | Notes |
+|---|---|---|
+| FEM rail enable | 7 | powered before the detect sense |
+| FEM chip enable | 2 | shared by both parts; the detect sense |
+| TX-select, GC1109 (CPS) | 46 | driven only when a GC1109 is detected |
+| TX-select, KCT8103L (CTX) | 5 | driven only when a KCT8103L is detected |
+
+The configured `s.lora.0.tx_power` is **antenna dBm** — iface-lora converts
+through the FEM's gain curve before driving the chip. Mind your region's ERP
+limits: 27 dBm is far past e.g. EU868's 14 dBm.
+
 ### Board-owned pin (in this straddle's `heltecv4.h`)
 
 | Signal | GPIO | Notes |
 |---|---|---|
 | Vext peripheral power EN | 36 | **active-low** — drive LOW to enable the +3.3 V rail (OLED, GNSS header) |
+
+### OLED + page button (owned by tinylcd, pins published here)
+
+| Signal | GPIO | | Signal | GPIO |
+|---|---|---|---|---|
+| OLED SDA | 17 | | OLED RST | 21 |
+| OLED SCL | 18 | | page button (BOOT/PRG) | 0 |
+
+0.96" SSD1306 128×64 (the `CONFIG_TINYLCD_SSD1306` default), address 0x3C,
+powered off Vext. A short click on BOOT/PRG steps to the next status page, a
+500 ms hold puts the screen to sleep, and any press wakes a dark screen —
+policy under `s.tinylcd.standby` ([tinylcd](../tinylcd)). The page dots
+default to "top unless flipped" (`CONFIG_TINYLCD_PAGE_INDICATOR=2`): the PRG
+button sits above the screen, and the dots track it through a flip.
 
 ### Memory / flash (published from `kconfig:`)
 
@@ -107,6 +143,8 @@ This board defines no storage keys of its own. Runtime LoRa parameters live at
 - [spangap-core](../spangap-core) — base runtime (storage, log, CLI, fs, ITS).
 - [iface-lora](../iface-lora) — owns the SX1262 radio engine; this board parks
   its CS and supplies its pins via Kconfig.
+- [tinylcd](../tinylcd) — staged by this board (`additional_installs`); owns
+  the OLED paged UI and the page button, pins supplied via Kconfig.
 
 ## Read next
 

@@ -33,6 +33,12 @@ static void heltecv4PowerInit(void)
     vext.intr_type    = GPIO_INTR_DISABLE;
     gpio_config(&vext);
     gpio_set_level((gpio_num_t)BOARD_VEXT_CTRL_PIN, BOARD_VEXT_ON_LEVEL);
+    /* Exempt the gate from light-sleep isolation: CONFIG_PM_SLP_DISABLE_GPIO
+     * switches every pin to its sleep config on sleep entry, which floats
+     * this active-low gate high and cuts the rail mid-sleep — the OLED loses
+     * VCC on the first light-sleep entry (e.g. the moment `usb down` releases
+     * the console's no-sleep lock) and comes back uninitialised. */
+    gpio_sleep_sel_dis((gpio_num_t)BOARD_VEXT_CTRL_PIN);
     vTaskDelay(pdMS_TO_TICKS(100));   /* rail settle */
 #endif
     /* Park the SX1262's CS HIGH (deselected) so it doesn't drive MISO before
