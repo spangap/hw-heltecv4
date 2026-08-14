@@ -10,6 +10,9 @@ include(${CMAKE_CURRENT_LIST_DIR}/spangap_requires.cmake)
 idf_component_register(
     SRCS
         "src/heltecv4.cpp"
+        # This board's one self-assertion (detect_hw), called by
+        # spangapInit() before any bus is claimed.
+        "src/detect.cpp"
         ${SPANGAP_CONDITIONAL_SRCS}
     INCLUDE_DIRS "include" ${SPANGAP_CONDITIONAL_INCLUDE_DIRS}
     REQUIRES

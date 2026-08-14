@@ -57,6 +57,28 @@ straddles ([iface-lora](../iface-lora), [spangap-core](../spangap-core),
 SX1262's pins (below) and the power-rail/CS glue. The install stack those
 straddles form is assembled by the buildable's `straddle.yaml`, not here.
 
+## Board identity (`detect_hw`)
+
+`esp-idf/src/detect.cpp` answers one question about this board: it returns
+`"hw-heltecv4"` when the hardware under the firmware is this board, and NULL when
+it is not. What it asks:
+
+16 MB flash, then the SSD1306 OLED acking on 17/18 (at 0x3C or 0x3D, whichever
+the strap picked) with Vext powered and the panel pulsed out of reset, confirmed
+by the SX1262 on the LoRa header. Vext and the OLED reset are released **only**
+when the probe fails: on the board this actually is, the firmware wants them
+exactly as the probe left them.
+
+spangap-core calls it before the first `onStart()` — the last moment no bus is
+claimed — and **halts the device awake** when the answer disagrees with the board
+this image was built for, since every pin map here would then belong to someone
+else's hardware. The confirmed answer is published as `sys.hw` and announced on
+the console as `build: hw hw-heltecv4`. flashmon's standalone detector carries a
+hand-kept copy of the same function, renamed `detect_hw_heltecv4`, to identify a chip
+whose firmware is unknown; change one, change the other. See
+[spangap-core/docs/init.md](../spangap-core/docs/init.md) and
+[flashmon/docs/detect.md](../flashmon/docs/detect.md).
+
 ## Hardware & pin map
 
 Heltec WiFi LoRa 32 (V4) — **ESP32-S3R2** (16 MB flash, 2 MB **quad** PSRAM,
