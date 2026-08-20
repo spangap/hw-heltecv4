@@ -46,9 +46,13 @@ extern "C" const char* detect_hw(void)
         detect_rail_release(BOARD_VEXT_CTRL_PIN);
         return NULL;
     }
-    if (!detect_radio(DETECT_LORA_SCK, DETECT_LORA_MOSI, DETECT_LORA_MISO,
-                      DETECT_LORA_CS, DETECT_LORA_RST, DETECT_LORA_BUSY, NULL)) {
-        detect_dbg("OLED answered but no radio — not a Heltec V4");
+    /* The modem, by name. An OLED on 17/18 with a radio on this header is not
+     * enough to settle it: the Meshnology W12 carries the same 16 MB flash, the
+     * same panel pins and the same LoRa header, and differs by the part on the
+     * end of it — an SX1262 here, an LR2021 there. */
+    if (!detect_radio_is(DETECT_LORA_SCK, DETECT_LORA_MOSI, DETECT_LORA_MISO,
+                         DETECT_LORA_CS, DETECT_LORA_RST, DETECT_LORA_BUSY, "sx1262")) {
+        detect_dbg("OLED answered but no SX1262 — not a Heltec V4");
         detect_rail_release(DETECT_OLED_RST);
         detect_rail_release(BOARD_VEXT_CTRL_PIN);
         return NULL;
