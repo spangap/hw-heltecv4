@@ -118,6 +118,14 @@ The configured `s.lora.0.tx_power` is **antenna dBm** — iface-lora converts
 through the FEM's gain curve before driving the chip. Mind your region's ERP
 limits: 27 dBm is far past e.g. EU868's 14 dBm.
 
+The FEM's receive LNA is what makes this board listen at ~13 mA where a bare
+SX1262 board listens at ~6: about 8 mA for as long as the radio is in RX. On a
+**KCT8103L** board (V4.3) it can be switched out of the receive path —
+`s.lora.0.fem_rx_lna=0`, or the "Front-end receive amplifier" switch in the
+LoRa settings, which appears only when that part was detected — at the cost of
+~20 dB of gain ahead of the chip. A solar node may prefer that trade. A GC1109
+board (≤ V4.2) has no such path; its LNA is always in line.
+
 ### Board-owned pin (in this straddle's `heltecv4.h`)
 
 | Signal | GPIO | Notes |

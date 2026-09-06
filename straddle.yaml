@@ -68,16 +68,36 @@ kconfig:
   # External FEM (PA/LNA/switch) between the SX1262 and the antenna — this is
   # what takes the board to 27 dBm. Two parts exist across board revisions
   # (GC1109 on <= 4.2, KCT8103L on 4.3) sharing the rail (GPIO 7) and the
-  # enable net (GPIO 2, pulled up only in the KCT8103L design — the boot-time
-  # detect sense) but using different direction pins; iface-lora detects the
-  # part and drives the right one. See iface-lora's lora_fem.h.
+  # shutdown net CSD (GPIO 2, pulled up to the FEM rail only in the KCT8103L
+  # design — the boot-time detect sense). The second control line differs in
+  # signal as well as pin: on <= 4.2 GPIO 46 is CPS, the PA/transmit-bypass
+  # select, with the TX/RX direction line CTX coming off the radio's DIO2; on
+  # 4.3 GPIO 5 is CTX itself and CPS has no MCU connection. iface-lora detects
+  # the part and drives the right one. See iface-lora's lora_fem.h.
   - CONFIG_LORA0_FEM_PWR_PIN=7
   - CONFIG_LORA0_FEM_EN_PIN=2
   - CONFIG_LORA0_FEM_TXSEL_A_PIN=46
   - CONFIG_LORA0_FEM_TXSEL_B_PIN=5
-  # The FEM ceiling at the antenna — sizes the TX-power slider at build time
-  # and caps the runtime power path once the FEM is detected.
+  # The FEM ceiling at the antenna — a board rating, which caps whatever the
+  # calibration below says the hardware reaches.
   - CONFIG_LORA_TX_POWER_MAX=27
+  # What the board actually radiates at the connector for a given register
+  # setting. Both parts amplify hard enough that the register number means
+  # nothing on its own: at the bottom of the range this board's quietest
+  # transmission is +7 dBm however low the radio is driven, so a node that
+  # announced the register figure would be understating its power by some 16 dB
+  # and every peer would compute its path loss wrong by the same amount.
+  #
+  # gc1109 (rev <= 4.2) is measured — tinySA Ultra Plus with a 30 dB pad at
+  # 869.6 MHz, +-1 dB, from MeshCore issue 1708. Note the turnover at the top:
+  # 20 gives more than 22 does, so max power is reached at 20 and asking for 22
+  # buys 136 mA and nothing else.
+  #
+  # kct8103l (rev 4.3) has no published measurement. It is datasheet
+  # arithmetic: the 17 dB pad ahead of the part, its 32 dB transmit gain, and
+  # the board's own 27 dBm rating for the saturation it does not publish. Grade
+  # says so, and a measured curve should replace it.
+  - 'CONFIG_LORA0_TX_CAL="gc1109 measured 1:7,5:12,10:20,12:23,14:24,16:25,18:27,20:28,22:27;kct8103l datasheet -9:6,12:27,22:27"'
   # 0.96" SSD1306 128x64 OLED on I2C (SDA 17 / SCL 18, reset on 21), powered
   # off the Vext rail heltecv4Start() enables. BOOT/PRG button (GPIO 0)
   # advances the page. Gated: without tinylcd staged these symbols don't exist.
