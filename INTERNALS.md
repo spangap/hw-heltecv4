@@ -14,7 +14,7 @@ publishes the board's hardware description as `kconfig:` values. Source layout:
 esp-idf/
 ├── CMakeLists.txt        component registration (+ SPANGAP_CONDITIONAL_SRCS glob)
 ├── include/heltecv4.h    board API + BOARD_VEXT_* pin macros
-└── src/heltecv4.cpp      Vext power rail + LoRa CS park
+└── src/heltecv4.cpp      Vext power rail + LoRa chip-select park
 ```
 
 Everything here is new (a board contributes hardware, not protocol). The
@@ -22,7 +22,7 @@ subsystems:
 
 - **Vext peripheral power rail** (`heltecv4PowerInit`) — drives the active-low
   power-enable gate on to bring up the board's external +3.3 V rail.
-- **LoRa CS park** (`heltecv4PowerInit`) — parks the SX1262's CS line HIGH so
+- **LoRa chip-select park** (`heltecv4PowerInit`) — parks the SX1262's CS line HIGH so
   the radio stays deselected until `loraInit()` claims the pin.
 
 The board also injects its hardware description as `kconfig:` values in
@@ -58,24 +58,24 @@ the Vext rail and parks the radio CS, then returns. Two things make this a
    (`BOARD_VEXT_ON_LEVEL = 0`) turns the rail ON. `heltecv4PowerInit` drives it
    and waits ~100 ms for the rail to settle. Bringing it up before the platform
    comes up means any rail-powered peripheral added later is live at boot.
-2. **LoRa CS parked HIGH before `loraInit()`.** The SX1262 shares no bus with
+2. **LoRa chip-select parked HIGH before `loraInit()`.** The SX1262 shares no bus with
    the flash, so there is no SD-mount race to lose (the way the T-Deck does on
    its shared FSPI bus). But `loraInit()` (in iface-lora) runs later and only
    then owns `CONFIG_LORA0_CS_PIN` — until then the radio's CS floats. Park it
    HIGH (deselected) at `start:` so the live SX1262 cannot drive MISO before its
    driver claims the pin.
 
-The CS park is guarded by `#if defined(CONFIG_LORA0_CS_PIN)`, which is defined
+The chip-select park is guarded by `#if defined(CONFIG_LORA0_CS_PIN)`, which is defined
 only when iface-lora is staged; the Vext block is guarded by
-`#if BOARD_VEXT_CTRL_PIN >= 0`. A build without LoRa simply skips the CS park.
+`#if BOARD_VEXT_CTRL_PIN >= 0`. A build without LoRa simply skips the chip-select park.
 
 ## 3. Pitfalls
 
-- **`heltecv4Start` before `spangapInit()`.** Vext bring-up and the CS park must
+- **`heltecv4Start` before `spangapInit()`.** Vext bring-up and the chip-select park must
   precede the platform; this is the reason for the `start:` band. Don't reorder
   it into `init:`. The radio is live once Vext settles, so its CS must already be
   parked before any bus activity.
-- **CS park before `loraInit()`.** Park the SX1262's CS HIGH at `start:` so the
+- **chip-select park before `loraInit()`.** Park the SX1262's CS HIGH at `start:` so the
   deselected radio stays off MISO until `loraInit()` owns the pin. Removing the
   park lets a live, unselected radio drive the bus line.
 - **Vext is active-low.** Drive GPIO 36 **LOW** to enable the rail

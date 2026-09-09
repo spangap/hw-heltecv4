@@ -4,7 +4,7 @@
 (V4)** — an ESP32-S3R2 (16 MB flash, 2 MB **quad** PSRAM) carrying one Semtech
 **SX1262** LoRa modem on its own SPI bus, behind a Vext-gated peripheral power
 rail. It makes the board usable by an application: it owns the Vext rail
-bring-up and the LoRa CS park, and it publishes the board's pin map and hardware
+bring-up and the LoRa chip-select park, and it publishes the board's pin map and hardware
 tuning as Kconfig. Board reference: <https://heltec.org/project/wifi-lora-32-v4/>.
 
 It is a **non-buildable** component — it decides nothing about what the device
@@ -36,7 +36,7 @@ board comes up automatically.
 
 | Hook | Band | Present when | Brings up |
 |---|---|---|---|
-| `heltecv4Start` | start | always | Vext peripheral power rail ON, LoRa CS park HIGH |
+| `heltecv4Start` | start | always | Vext peripheral power rail ON, LoRa chip-select park HIGH |
 
 `heltecv4Start` runs in the `start:` band, **before** `spangapInit()`. It is
 bare-hardware bring-up: it drives the Vext rail on so the OLED (and any other
@@ -48,7 +48,7 @@ not a board hook.
 
 Unlike the T-Deck, the SX1262 sits on its **own** SPI bus (separate from the
 flash bus) and is powered directly rather than off Vext, so there is no
-shared-bus SD probe to race during bring-up. The CS park is still required so
+shared-bus SD probe to race during bring-up. The chip-select park is still required so
 the deselected radio stays off the bus until its driver owns the pin.
 
 The LoRa radio engine, the IP/web platform and the mesh stack are owned by other
@@ -178,5 +178,5 @@ This board defines no storage keys of its own. Runtime LoRa parameters live at
 
 ## Read next
 
-- [INTERNALS.md](INTERNALS.md) — the Vext/CS-park bring-up, the start-band
+- [INTERNALS.md](INTERNALS.md) — the Vext / chip-select-park bring-up, the start-band
   ordering rule, and the board pitfalls.
