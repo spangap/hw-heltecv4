@@ -31,6 +31,13 @@ services:
 # staging spangap-lcd).
 additional_installs:
   - spangap/tinylcd
+  # The SX1262 is soldered to this board, so the board is what stages the LoRa
+  # interface — and LoRaMon with it, which iface-lora pulls in. The radio rides
+  # on the board for the same reason the screen does: a buildable stays
+  # radio-agnostic, and a board with no modem ships no LoRa settings at all.
+  # Gated on rns, because it is a Reticulum interface: a buildable that is not a
+  # Reticulum node must not inherit the mesh from the board's modem.
+  - { install: reticulous/iface-lora, when: reticulous/rns }
 # Board VALUES, fed to the symbols other straddles / IDF DEFINE through the
 # collected staging/sdkconfig.spangap-fragments. A board straddle is non-
 # buildable, so its sdkconfig.defaults would be IGNORED — everything that
@@ -53,34 +60,40 @@ kconfig:
   # One SX1262 LoRa modem on its own SPI bus (separate from the flash bus).
   # Pins per the Heltec WiFi LoRa 32 V4 pin map. The SX1262 drives DIO2 as its
   # own RF antenna switch and DIO3 supplies the 1.8 V TCXO.
-  - CONFIG_LORA_COUNT=1
-  - CONFIG_LORA_SPI_HOST=2
-  - CONFIG_LORA_SCK_PIN=9
-  - CONFIG_LORA_MOSI_PIN=10
-  - CONFIG_LORA_MISO_PIN=11
-  - CONFIG_LORA0_CS_PIN=8
-  - CONFIG_LORA0_DIO1_PIN=14
-  - CONFIG_LORA0_BUSY_PIN=13
-  - CONFIG_LORA0_RST_PIN=12
-  - CONFIG_LORA0_TCXO_MV=1800
-  - CONFIG_LORA0_DIO2_RF_SWITCH=y
-  - CONFIG_LORA0_RADIO_SX1262=y
-  # External FEM (PA/LNA/switch) between the SX1262 and the antenna — this is
-  # what takes the board to 27 dBm. Two parts exist across board revisions
-  # (GC1109 on <= 4.2, KCT8103L on 4.3) sharing the rail (GPIO 7) and the
-  # shutdown net CSD (GPIO 2, pulled up to the FEM rail only in the KCT8103L
-  # design — the boot-time detect sense). The second control line differs in
-  # signal as well as pin: on <= 4.2 GPIO 46 is CPS, the PA/transmit-bypass
-  # select, with the TX/RX direction line CTX coming off the radio's DIO2; on
-  # 4.3 GPIO 5 is CTX itself and CPS has no MCU connection. iface-lora detects
-  # the part and drives the right one. See iface-lora's lora_fem.h.
-  - CONFIG_LORA0_FEM_PWR_PIN=7
-  - CONFIG_LORA0_FEM_EN_PIN=2
-  - CONFIG_LORA0_FEM_TXSEL_A_PIN=46
-  - CONFIG_LORA0_FEM_TXSEL_B_PIN=5
-  # The FEM ceiling at the antenna — a board rating, which caps whatever the
-  # calibration below says the hardware reaches.
-  - CONFIG_LORA_TX_POWER_MAX=27
+  # Gated on iface-lora: the CONFIG_LORA_* symbols are DEFINED by that
+  # straddle's Kconfig, so applying these in a build without it would warn as
+  # unknown symbols.
+  - when: reticulous/iface-lora
+    set:
+      - CONFIG_LORA_COUNT=1
+      - CONFIG_LORA_SPI_HOST=2
+      - CONFIG_LORA_SCK_PIN=9
+      - CONFIG_LORA_MOSI_PIN=10
+      - CONFIG_LORA_MISO_PIN=11
+      - CONFIG_LORA0_CS_PIN=8
+      - CONFIG_LORA0_DIO1_PIN=14
+      - CONFIG_LORA0_BUSY_PIN=13
+      - CONFIG_LORA0_RST_PIN=12
+      - CONFIG_LORA0_TCXO_MV=1800
+      - CONFIG_LORA0_DIO2_RF_SWITCH=y
+      - CONFIG_LORA0_RADIO_SX1262=y
+      # External FEM (PA/LNA/switch) between the SX1262 and the antenna — this
+      # is what takes the board to 27 dBm. Two parts exist across board
+      # revisions (GC1109 on <= 4.2, KCT8103L on 4.3) sharing the rail (GPIO 7)
+      # and the shutdown net CSD (GPIO 2, pulled up to the FEM rail only in the
+      # KCT8103L design — the boot-time detect sense). The second control line
+      # differs in signal as well as pin: on <= 4.2 GPIO 46 is CPS, the
+      # PA/transmit-bypass select, with the TX/RX direction line CTX coming off
+      # the radio's DIO2; on 4.3 GPIO 5 is CTX itself and CPS has no MCU
+      # connection. iface-lora detects the part and drives the right one. See
+      # iface-lora's lora_fem.h.
+      - CONFIG_LORA0_FEM_PWR_PIN=7
+      - CONFIG_LORA0_FEM_EN_PIN=2
+      - CONFIG_LORA0_FEM_TXSEL_A_PIN=46
+      - CONFIG_LORA0_FEM_TXSEL_B_PIN=5
+      # The FEM ceiling at the antenna — a board rating, which caps whatever the
+      # calibration below says the hardware reaches.
+      - CONFIG_LORA_TX_POWER_MAX=27
   # What the board actually radiates at the connector for a given register
   # setting. Both parts amplify hard enough that the register number means
   # nothing on its own: at the bottom of the range this board's quietest
@@ -97,7 +110,9 @@ kconfig:
   # arithmetic: the 17 dB pad ahead of the part, its 32 dB transmit gain, and
   # the board's own 27 dBm rating for the saturation it does not publish. Grade
   # says so, and a measured curve should replace it.
-  - 'CONFIG_LORA0_TX_CAL="gc1109 measured 1:7,5:12,10:20,12:23,14:24,16:25,18:27,20:28,22:27;kct8103l datasheet -9:6,12:27,22:27"'
+  - when: reticulous/iface-lora
+    set:
+      - 'CONFIG_LORA0_TX_CAL="gc1109 measured 1:7,5:12,10:20,12:23,14:24,16:25,18:27,20:28,22:27;kct8103l datasheet -9:6,12:27,22:27"'
   # 0.96" SSD1306 128x64 OLED on I2C (SDA 17 / SCL 18, reset on 21), powered
   # off the Vext rail heltecv4Start() enables. BOOT/PRG button (GPIO 0)
   # advances the page. Gated: without tinylcd staged these symbols don't exist.
